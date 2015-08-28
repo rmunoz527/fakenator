@@ -1,12 +1,11 @@
-package models
+package com.stratio.models
 
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import org.json4s.{DefaultFormats, Formats}
 
 import scala.util.Random
 
-case class RawModel (id: String,
+case class RawModel (order_id: String,
                      timestamp: String,
                      client_id: Integer,
                      latitude: Double,
@@ -58,7 +57,7 @@ object RawModel {
       val product: String = Range_family_product.get(family)
         .get.keySet.toSeq(generateRandomInt(0, Range_family_product.get(family).get.keySet.size - 1))
       val price: Float = Range_family_product.get(family).get.get(product).get
-      val quantity = generateRandomInt(1, 8)
+      val quantity = generateRandomInt(1, 30)
       new LineModel(product, family, quantity, price)
     })
   }
