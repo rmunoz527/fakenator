@@ -3,6 +3,7 @@ package com.stratio.models
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
+import scala.io.Source
 import scala.util.Random
 
 case class RawModel (order_id: String,
@@ -26,30 +27,19 @@ object RawModel {
 
   val MaxLines = 30
   val Range_client_id = (1, 30000)
-  val Range_payment_method = Seq("credit card", "cash", "online")
-  val Range_shopping_center = Seq("Sevilla", "Madrid", "Salamanca", "Valencia", "Barcelona", "Rome", "Paris", "Online")
+  val Range_payment_method = Source.fromInputStream(
+  this.getClass.getClassLoader.getResourceAsStream("payment-methods.txt")).getLines().toSeq
+  val Range_shopping_center = Source.fromInputStream(
+    this.getClass.getClassLoader.getResourceAsStream("shopping-centers.txt")).getLines().toSeq
   val Range_employee = (1, 300)
   val Range_quantity = (1, 30)
   val R = Random
 
-  val Range_family_product: Map[String, Map[String,Float]] = Map(
-    "electronic" -> Map(
-      "keyboard" -> 30.5f,
-      "ram" -> 90f
-    ),
-    "feeding" -> Map(
-      "apples" -> 5.3f,
-      "milk" -> 3f
-    ),
-    "clothes" -> Map(
-      "nike air shoes" -> 120.82f,
-      "adidas shoes" -> 90.23f
-    ),
-    "drugs" -> Map(
-      "aspirin" -> 5.6f,
-      "sunscreen" -> 3f
-    )
-  )
+  val Range_family_product: Map[String, Map[String,Float]] = Source.fromInputStream(
+    this.getClass.getClassLoader.getResourceAsStream("family-products.csv")).getLines().map(x => {
+      val splitted = x.split(",")
+      (splitted(0), Map(splitted(1) -> splitted(2).toFloat))
+    }).toMap
 
   def generateLines(): Seq[LineModel] = {
     (1 to MaxLines).map(x => {
@@ -82,5 +72,4 @@ object RawModel {
     if(current.length != 16) generateCreditCard(current + generateRandomInt(0,9))
     else current
   }
-
 }
