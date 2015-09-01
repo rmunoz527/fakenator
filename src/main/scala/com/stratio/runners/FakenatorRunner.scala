@@ -1,7 +1,6 @@
 package com.stratio.runners
 
 import java.util.UUID
-import java.util.logging.LogManager
 
 import com.stratio.models.{ConfigModel, RawModel}
 import org.apache.log4j.Logger
@@ -22,7 +21,7 @@ object FakenatorRunner {
   val clientIdCreditCard: Map[Int, String] = generateClientIdCreditCard((1 to NumberOfClients).toSeq, Map())
   val clientIdGeo: Map[Int, (Double, Double)] = generateClientIdGeo(clientIdCreditCard, geolocations)
 
-  val L = Logger.getLogger(FakenatorRunner.getClass)
+  //val L = Logger.getLogger(FakenatorRunner.getClass)
 
   def main(args: Array[String]) {
     val parser = new scopt.OptionParser[ConfigModel]("fakenator") {
@@ -72,7 +71,7 @@ object FakenatorRunner {
       totalAmount,
       lines)
 
-    L.info(write(rawModel))
+    println(write(rawModel))
 
     if(count % config.rawSize == 0) {
       Thread.sleep(config.rawTimeout)

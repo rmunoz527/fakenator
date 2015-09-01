@@ -61,7 +61,8 @@ object RawModel {
   }
 
   def generateTimestamp(): String = {
-    DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").print(new DateTime())
+    val datetime = new DateTime().minusDays(generateRandomInt(0,60))
+    DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").print(datetime)
   }
 
   def generateRandomInt(min: Int, max: Int): Int = {
