@@ -3,6 +3,7 @@ package com.stratio.models
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
+import scala.annotation.tailrec
 import scala.io.Source
 import scala.util.Random
 
@@ -42,7 +43,7 @@ object RawModel {
     }).toMap
 
   def generateLines(): Seq[LineModel] = {
-    (1 to MaxLines).map(x => {
+    (1 to generateRandomInt(1,MaxLines)).map(x => {
       val family = Range_family_product.keySet.toSeq(generateRandomInt(0, Range_family_product.keySet.size - 1))
       val product: String = Range_family_product.get(family)
         .get.keySet.toSeq(generateRandomInt(0, Range_family_product.get(family).get.keySet.size - 1))
@@ -62,13 +63,14 @@ object RawModel {
 
   def generateTimestamp(): String = {
     val datetime = new DateTime().minusDays(generateRandomInt(0,60))
-    DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").print(datetime)
+    DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss ZZ").print(datetime)
   }
 
   def generateRandomInt(min: Int, max: Int): Int = {
     R.nextInt((max -min) + 1) + min
   }
 
+  @tailrec
   def generateCreditCard(current: String): String = {
     if(current.length != 16) generateCreditCard(current + generateRandomInt(0,9))
     else current

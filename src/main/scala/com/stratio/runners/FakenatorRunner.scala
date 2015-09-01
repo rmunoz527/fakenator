@@ -13,7 +13,7 @@ import scala.io.Source
 object FakenatorRunner {
 
   val DefaultFailureTimeout = 2000L
-  val NumberOfClients = 30000
+  val NumberOfClients = 1000
 
   implicit val formats: Formats = DefaultFormats
 
@@ -21,7 +21,13 @@ object FakenatorRunner {
   val clientIdCreditCard: Map[Int, String] = generateClientIdCreditCard((1 to NumberOfClients).toSeq, Map())
   val clientIdGeo: Map[Int, (Double, Double)] = generateClientIdGeo(clientIdCreditCard, geolocations)
 
-  //val L = Logger.getLogger(FakenatorRunner.getClass)
+  val L = Logger.getLogger(FakenatorRunner.getClass)
+
+  val alertMessage = """
+                      0: For the same client_id more than one order in less than 5 minutes with the same credit card in
+                         different shopping centers.
+                      1: For the same client_id more than one order with different credit cards in less than 10 minutes.
+                     """
 
   def main(args: Array[String]) {
     val parser = new scopt.OptionParser[ConfigModel]("fakenator") {
@@ -30,11 +36,15 @@ object FakenatorRunner {
         c.copy(rawSize = x) } text(s"number of created events before to perform a timeout. Default: ${ConfigModel.DefaultRawSize}")
       opt[Int]('t', "rawTimeout") action { (x, c) =>
         c.copy(rawTimeout = x) } text(s"number of milliseconds to wait after events were created. Default: ${ConfigModel.DefaultRawSizeTimeout} milliseconds")
+      opt[Int]('a', "generateAlert") action { (x, c) =>
+        c.copy(generateAlert = x) } text(alertMessage)
       help("help") text("prints this usage text")
     }
 
     parser.parse(args, ConfigModel()) match {
-      case Some(config) => generateRaw(clientIdGeo, clientIdCreditCard, config, 1)
+      case Some(config) => {
+        generateRaw(clientIdGeo, clientIdCreditCard, config, 1)
+      }
       case None => parser.showTryHelp
     }
   }
@@ -45,13 +55,16 @@ object FakenatorRunner {
                           clientIdCreditCard: Map[Int, String],
                           config: ConfigModel,
                           count: Int)(implicit formats: Formats): Unit = {
+
+
     val id = UUID.randomUUID().toString
     val timestamp = RawModel.generateTimestamp()
-    val clientId = RawModel.generateRandomInt(1, NumberOfClients)
+    val clientId = if(config.generateAlert == 0 || config.generateAlert == 1) 10 else RawModel.generateRandomInt(1,
+      NumberOfClients)
     val latitude = clientIdGeo.get(clientId).get._1
     val longitude = clientIdGeo.get(clientId).get._2
     val paymentMethod = RawModel.generatePaymentMethod()
-    val creditCard = clientIdCreditCard.get(clientId).get
+    val creditCard = if(config.generateAlert == 1) RawModel.generateCreditCard("") else clientIdCreditCard.get(clientId).get
     val shoppingCenter = RawModel.generateShoppingCenter()
     val employee = RawModel.generateRandomInt(1, 300)
 
@@ -72,6 +85,7 @@ object FakenatorRunner {
       lines)
 
     println(write(rawModel))
+    L.info(write(rawModel))
 
     if(count % config.rawSize == 0) {
       Thread.sleep(config.rawTimeout)
@@ -105,4 +119,3 @@ object FakenatorRunner {
     })
   }
 }
-
