@@ -3,6 +3,7 @@ package com.stratio.runners
 import java.util.UUID
 
 import com.stratio.models.{ConfigModel, RawModel}
+import org.apache.flume.clients.log4jappender.Log4jAppender
 import org.apache.log4j.Logger
 import org.json4s.native.Serialization._
 import org.json4s.{DefaultFormats, Formats}
@@ -21,7 +22,7 @@ object FakenatorRunner {
   val clientIdCreditCard: Map[Int, String] = generateClientIdCreditCard((1 to NumberOfClients).toSeq, Map())
   val clientIdGeo: Map[Int, (Double, Double)] = generateClientIdGeo(clientIdCreditCard, geolocations)
 
-  val L = Logger.getLogger(FakenatorRunner.getClass)
+  lazy val L = Logger.getRootLogger
 
   val alertMessage = """
                       0: For the same client_id more than one order in less than 5 minutes with the same credit card in
@@ -32,6 +33,10 @@ object FakenatorRunner {
   def main(args: Array[String]) {
     val parser = new scopt.OptionParser[ConfigModel]("fakenator") {
       head("Stratio Fakenator", "1.0")
+      opt[String] ('h', "hostname").required.action { (x, c) =>
+        c.copy(hostname = x) } text(s"Hostname of flume (mandatory)")
+      opt[Int] ('r', "port").required.action { (x, c) =>
+        c.copy(port = x) } text(s"Port of flume (mandatory)")
       opt[Int] ('r', "rawSize") action { (x, c) =>
         c.copy(rawSize = x) } text(s"number of created events before to perform a timeout. Default: ${ConfigModel.DefaultRawSize}")
       opt[Int]('t', "rawTimeout") action { (x, c) =>
@@ -43,6 +48,7 @@ object FakenatorRunner {
 
     parser.parse(args, ConfigModel()) match {
       case Some(config) => {
+
         generateRaw(clientIdGeo, clientIdCreditCard, config, 1)
       }
       case None => parser.showTryHelp
@@ -117,5 +123,14 @@ object FakenatorRunner {
       val index = RawModel.generateRandomInt(0, geolocations.size - 1)
       x._1 -> ((geolocations(index)).split(":")(0).toDouble, (geolocations(index)).split(":")(1).toDouble)
     })
+  }
+
+  private def configureFlumeAppender(hostname: String, port: Int): Unit = {
+    val flumeAppender = new Log4jAppender()
+    flumeAppender.setHostname(hostname)
+    flumeAppender.setPort(port)
+    flumeAppender.activateOptions()
+
+    Logger.getRootLogger().addAppender(flumeAppender)
   }
 }

@@ -2,7 +2,9 @@ package com.stratio.models
 
 import com.stratio.models.ConfigModel._
 
-case class ConfigModel(rawSize: Int = DefaultRawSize,
+case class ConfigModel(hostname: String = "localhost",
+                       port: Int = 4141,
+                       rawSize: Int = DefaultRawSize,
                        rawTimeout: Long = DefaultRawSizeTimeout,
                        generateAlert: Int = DefaulGenerateAlert) {}
 
