@@ -25,6 +25,7 @@ import org.json4s.{DefaultFormats, Formats}
 
 import scala.annotation.tailrec
 import scala.io.Source
+import scala.util.Try
 
 object FakenatorRunner {
 
@@ -37,7 +38,7 @@ object FakenatorRunner {
   val clientIdCreditCard: Map[Int, String] = generateClientIdCreditCard((1 to NumberOfClients).toSeq, Map())
   val clientIdGeo: Map[Int, (Double, Double)] = generateClientIdGeo(clientIdCreditCard, geolocations)
 
-  lazy val L = Logger.getRootLogger
+  lazy val L = Logger.getLogger(FakenatorRunner.getClass)
 
   val alertMessage = """
                       0: For the same client_id more than one order in less than 5 minutes with the same credit card in
@@ -63,8 +64,14 @@ object FakenatorRunner {
 
     parser.parse(args, ConfigModel()) match {
       case Some(config) => {
-
-        generateRaw(clientIdGeo, clientIdCreditCard, config, 1)
+        if(Try({
+          configureFlumeAppender(config.hostname, config.port)
+          generateRaw(clientIdGeo, clientIdCreditCard, config, 1)
+        }).isFailure) {
+          println("Flume is down. Waiting 5 seconds ...")
+          Thread.sleep(5000l)
+          main(args)
+        }
       }
       case None => parser.showTryHelp
     }
@@ -94,7 +101,7 @@ object FakenatorRunner {
 
     val rawModel = new RawModel(
       id,
-      timestamp,
+      //      timestamp,
       clientId,
       latitude,
       longitude,
@@ -133,7 +140,7 @@ object FakenatorRunner {
   }
 
   private def generateClientIdGeo(clientIdCreditCard: Map[Int, String], geolocations: Seq[String])
-    :Map[Int, (Double, Double)] = {
+  :Map[Int, (Double, Double)] = {
     clientIdCreditCard.map(x => {
       val index = RawModel.generateRandomInt(0, geolocations.size - 1)
       x._1 -> ((geolocations(index)).split(":")(0).toDouble, (geolocations(index)).split(":")(1).toDouble)
@@ -145,7 +152,6 @@ object FakenatorRunner {
     flumeAppender.setHostname(hostname)
     flumeAppender.setPort(port)
     flumeAppender.activateOptions()
-
     Logger.getRootLogger().addAppender(flumeAppender)
   }
 }

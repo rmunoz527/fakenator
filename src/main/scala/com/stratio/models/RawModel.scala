@@ -23,7 +23,7 @@ import scala.io.Source
 import scala.util.Random
 
 case class RawModel (order_id: String,
-                     timestamp: String,
+//                     timestamp: String,
                      client_id: Integer,
                      latitude: Double,
                      longitude: Double,
