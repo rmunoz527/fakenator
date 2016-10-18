@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Stratio (http://stratio.com)
+ * Copyright (C) 2016 Stratio (http://stratio.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.stratio.runners
 
 import java.util.UUID
@@ -29,16 +30,15 @@ import scala.util.Try
 
 object FakenatorRunner {
 
-  val DefaultFailureTimeout = 2000L
-  val NumberOfClients = 1000
-
   implicit val formats: Formats = DefaultFormats
 
+  val DefaultFailureTimeout = 2000L
+  val NumberOfClients = 1000
   val geolocations = generateGeolocations()
   val clientIdCreditCard: Map[Int, String] = generateClientIdCreditCard((1 to NumberOfClients).toSeq, Map())
   val clientIdGeo: Map[Int, (Double, Double)] = generateClientIdGeo(clientIdCreditCard, geolocations)
 
-  lazy val L = Logger.getLogger(FakenatorRunner.getClass)
+  lazy val logger = Logger.getLogger(FakenatorRunner.getClass)
 
   val alertMessage = """
                       0: For the same client_id more than one order in less than 5 minutes with the same credit card in
@@ -50,22 +50,24 @@ object FakenatorRunner {
     val parser = new scopt.OptionParser[ConfigModel]("fakenator") {
       head("Stratio Fakenator", "1.0")
       opt[String] ('h', "hostname").required.action { (x, c) =>
-        c.copy(hostname = x) } text(s"Hostname of flume (mandatory)")
-      opt[Int] ('r', "port").required.action { (x, c) =>
-        c.copy(port = x) } text(s"Port of flume (mandatory)")
+        c.copy(hostname = x) } text(s"Hostname of flume or kafka (mandatory)")
+      opt[Int] ('p', "port").required.action { (x, c) =>
+        c.copy(port = x) } text(s"Port of flume or kafka (mandatory)")
       opt[Int] ('r', "rawSize") action { (x, c) =>
         c.copy(rawSize = x) } text(s"number of created events before to perform a timeout. Default: ${ConfigModel.DefaultRawSize}")
       opt[Int]('t', "rawTimeout") action { (x, c) =>
         c.copy(rawTimeout = x) } text(s"number of milliseconds to wait after events were created. Default: ${ConfigModel.DefaultRawSizeTimeout} milliseconds")
       opt[Int]('a', "generateAlert") action { (x, c) =>
         c.copy(generateAlert = x) } text(alertMessage)
+      opt[String]('o', "output") action { (x, c) =>
+        c.copy(output = x) } text(s"Output of data: flume|kafka. Default: ${ConfigModel.DefaultOutput}")
       help("help") text("prints this usage text")
     }
 
     parser.parse(args, ConfigModel()) match {
       case Some(config) => {
         if(Try({
-          configureFlumeAppender(config.hostname, config.port)
+          if(config.output == "flume") configureFlumeAppender(config.hostname, config.port)
           generateRaw(clientIdGeo, clientIdCreditCard, config, 1)
         }).isFailure) {
           println("Flume is down. Waiting 5 seconds ...")
@@ -83,8 +85,6 @@ object FakenatorRunner {
                           clientIdCreditCard: Map[Int, String],
                           config: ConfigModel,
                           count: Int)(implicit formats: Formats): Unit = {
-
-
     val id = UUID.randomUUID().toString
     val timestamp = RawModel.generateTimestamp()
     val clientId = if(config.generateAlert == 0 || config.generateAlert == 1) 10 else RawModel.generateRandomInt(1,
@@ -113,7 +113,11 @@ object FakenatorRunner {
       lines)
 
     println(write(rawModel))
-    L.info(write(rawModel))
+
+    config.output match {
+      case "flume" => logger.info(write(rawModel))
+      case "kafka" => println("todo")
+    }
 
     if(count % config.rawSize == 0) {
       Thread.sleep(config.rawTimeout)

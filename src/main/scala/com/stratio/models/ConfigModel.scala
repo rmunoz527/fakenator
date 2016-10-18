@@ -21,6 +21,7 @@ case class ConfigModel(hostname: String = "localhost",
                        port: Int = 4141,
                        rawSize: Int = DefaultRawSize,
                        rawTimeout: Long = DefaultRawSizeTimeout,
+                       output: String = DefaultOutput,
                        generateAlert: Int = DefaulGenerateAlert) {}
 
 object ConfigModel {
@@ -28,4 +29,5 @@ object ConfigModel {
   val DefaulGenerateAlert = -1
   val DefaultRawSize = 10
   val DefaultRawSizeTimeout = 100L
+  val DefaultOutput = "flume"
 }
