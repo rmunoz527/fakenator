@@ -18,15 +18,15 @@ package com.stratio.runners
 
 import java.util.UUID
 
+import com.stratio.kafka.KafkaProducer
 import com.stratio.models.{ConfigModel, RawModel}
-import org.apache.flume.clients.log4jappender.Log4jAppender
-import org.apache.log4j.Logger
 import org.json4s.native.Serialization._
 import org.json4s.{DefaultFormats, Formats}
 
 import scala.annotation.tailrec
 import scala.io.Source
-import scala.util.Try
+import scala.util.{Failure, Try}
+import org.apache.log4j.Logger
 
 object FakenatorRunner {
 
@@ -38,7 +38,7 @@ object FakenatorRunner {
   val clientIdCreditCard: Map[Int, String] = generateClientIdCreditCard((1 to NumberOfClients).toSeq, Map())
   val clientIdGeo: Map[Int, (Double, Double)] = generateClientIdGeo(clientIdCreditCard, geolocations)
 
-  lazy val logger = Logger.getLogger(FakenatorRunner.getClass)
+  val logger = Logger.getLogger(FakenatorRunner.getClass)
 
   val alertMessage = """
                       0: For the same client_id more than one order in less than 5 minutes with the same credit card in
@@ -49,30 +49,26 @@ object FakenatorRunner {
   def main(args: Array[String]) {
     val parser = new scopt.OptionParser[ConfigModel]("fakenator") {
       head("Stratio Fakenator", "1.0")
-      opt[String] ('h', "hostname").required.action { (x, c) =>
-        c.copy(hostname = x) } text(s"Hostname of flume or kafka (mandatory)")
-      opt[Int] ('p', "port").required.action { (x, c) =>
-        c.copy(port = x) } text(s"Port of flume or kafka (mandatory)")
+      opt[String] ('b', "bootstrapServers").required.action { (x, c) =>
+        c.copy(bootstrapServers = x) } text(s"Bootstrap servers of confluent-kafka (mandatory)")
+      opt[String] ('t', "topic").required.action { (x, c) =>
+        c.copy(topic = x) } text(s"Bootstrap servers of confluent-kafka (mandatory)")
+      opt[String] ('s', "schemaRegistryURL").required.action { (x, c) =>
+        c.copy(schemaRegistryURL = x) } text(s"SchemaRegistryURL of confluent-schema (mandatory)")
       opt[Int] ('r', "rawSize") action { (x, c) =>
         c.copy(rawSize = x) } text(s"number of created events before to perform a timeout. Default: ${ConfigModel.DefaultRawSize}")
-      opt[Int]('t', "rawTimeout") action { (x, c) =>
+      opt[Int]('o', "rawTimeout") action { (x, c) =>
         c.copy(rawTimeout = x) } text(s"number of milliseconds to wait after events were created. Default: ${ConfigModel.DefaultRawSizeTimeout} milliseconds")
-      opt[Int]('a', "generateAlert") action { (x, c) =>
-        c.copy(generateAlert = x) } text(alertMessage)
-      opt[String]('o', "output") action { (x, c) =>
-        c.copy(output = x) } text(s"Output of data: flume|kafka. Default: ${ConfigModel.DefaultOutput}")
       help("help") text("prints this usage text")
     }
 
     parser.parse(args, ConfigModel()) match {
       case Some(config) => {
-        if(Try({
-          if(config.output == "flume") configureFlumeAppender(config.hostname, config.port)
+        Try({
           generateRaw(clientIdGeo, clientIdCreditCard, config, 1)
-        }).isFailure) {
-          println("Flume is down. Waiting 5 seconds ...")
-          Thread.sleep(5000l)
-          main(args)
+        }) match {
+          case Failure(ex) => logger.error(ex.getLocalizedMessage, ex)
+          case _ => None
         }
       }
       case None => parser.showTryHelp
@@ -86,38 +82,28 @@ object FakenatorRunner {
                           config: ConfigModel,
                           count: Int)(implicit formats: Formats): Unit = {
     val id = UUID.randomUUID().toString
-    val timestamp = RawModel.generateTimestamp()
-    val clientId = if(config.generateAlert == 0 || config.generateAlert == 1) 10 else RawModel.generateRandomInt(1,
-      NumberOfClients)
+    val clientId = RawModel.generateRandomInt(1, NumberOfClients)
     val latitude = clientIdGeo.get(clientId).get._1
     val longitude = clientIdGeo.get(clientId).get._2
     val paymentMethod = RawModel.generatePaymentMethod()
-    val creditCard = if(config.generateAlert == 1) RawModel.generateCreditCard("") else clientIdCreditCard.get(clientId).get
+    val creditCard = clientIdCreditCard.get(clientId).get
     val shoppingCenter = RawModel.generateShoppingCenter()
     val employee = RawModel.generateRandomInt(1, 300)
 
-    val lines = RawModel.generateLines()
-    val totalAmount = lines.map(x => x.price * x.quantity).sum
-
     val rawModel = new RawModel(
       id,
-      //      timestamp,
       clientId,
       latitude,
       longitude,
       paymentMethod,
       creditCard,
       shoppingCenter,
-      employee,
-      totalAmount,
-      lines)
+      employee)
 
     println(write(rawModel))
 
-    config.output match {
-      case "flume" => logger.info(write(rawModel))
-      case "kafka" => println("todo")
-    }
+    val producer = KafkaProducer.getInstance(s"${config.bootstrapServers}", s"${config.schemaRegistryURL}")
+    KafkaProducer.send(producer, config.topic, rawModel)
 
     if(count % config.rawSize == 0) {
       Thread.sleep(config.rawTimeout)
@@ -149,13 +135,5 @@ object FakenatorRunner {
       val index = RawModel.generateRandomInt(0, geolocations.size - 1)
       x._1 -> ((geolocations(index)).split(":")(0).toDouble, (geolocations(index)).split(":")(1).toDouble)
     })
-  }
-
-  private def configureFlumeAppender(hostname: String, port: Int): Unit = {
-    val flumeAppender = new Log4jAppender()
-    flumeAppender.setHostname(hostname)
-    flumeAppender.setPort(port)
-    flumeAppender.activateOptions()
-    Logger.getRootLogger().addAppender(flumeAppender)
   }
 }

@@ -17,17 +17,16 @@ package com.stratio.models
 
 import com.stratio.models.ConfigModel._
 
-case class ConfigModel(hostname: String = "localhost",
-                       port: Int = 4141,
+case class ConfigModel(bootstrapServers: String =DefaultBootstrapServers,
+                       schemaRegistryURL: String = DefaultSchemaRegistryURL,
+                       topic: String = DefaultKafkaTopic,
                        rawSize: Int = DefaultRawSize,
-                       rawTimeout: Long = DefaultRawSizeTimeout,
-                       output: String = DefaultOutput,
-                       generateAlert: Int = DefaulGenerateAlert) {}
+                       rawTimeout: Long = DefaultRawSizeTimeout) {}
 
 object ConfigModel {
-
-  val DefaulGenerateAlert = -1
   val DefaultRawSize = 10
   val DefaultRawSizeTimeout = 100L
-  val DefaultOutput = "flume"
+  val DefaultSchemaRegistryURL = "http://localhost:8080"
+  val DefaultBootstrapServers = "localhost:9091"
+  val DefaultKafkaTopic = "rawTopic"
 }
