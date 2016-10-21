@@ -23,16 +23,13 @@ import scala.io.Source
 import scala.util.Random
 
 case class RawModel (order_id: String,
-//                     timestamp: String,
                      client_id: Integer,
                      latitude: Double,
                      longitude: Double,
                      payment_method: String,
                      credit_card: String,
                      shopping_center: String,
-                     employee: Integer,
-                     total_amount: Float,
-                     lines: Seq[LineModel]) {}
+                     employee: Integer) {}
 
 case class LineModel (product: String,
                       family: String,
