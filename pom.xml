@@ -10,8 +10,8 @@
     <packaging>jar</packaging>
 
     <properties>
-        <scala.binary.version>2.10</scala.binary.version>
-        <scala.version>2.10.4</scala.version>
+        <!--<scala.binary.version>2.10</scala.binary.version>-->
+        <scala.version>2.11.11</scala.version>
     </properties>
 
     <repositories>
@@ -20,12 +20,12 @@
             <url>http://packages.confluent.io/maven/</url>
         </repository>
     </repositories>
-
+<!--
     <parent>
         <groupId>com.stratio</groupId>
         <artifactId>parent</artifactId>
         <version>0.9.0-SNAPSHOT</version>
-    </parent>
+    </parent>-->
 
     <dependencies>
         <dependency>
@@ -58,11 +58,18 @@
             <groupId>log4j</groupId>
             <version>1.2.16</version>
         </dependency>
-        <dependency>
+        <!--<dependency>
             <artifactId>flume-ng-log4jappender</artifactId>
             <groupId>org.apache.flume.flume-ng-clients</groupId>
             <version>1.2.0-cdh4.1.2</version>
+        </dependency>-->
+        <!-- https://mvnrepository.com/artifact/org.apache.flume.flume-ng-clients/flume-ng-log4jappender -->
+        <dependency>
+            <groupId>org.apache.flume.flume-ng-clients</groupId>
+            <artifactId>flume-ng-log4jappender</artifactId>
+            <version>1.7.0</version>
         </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-jdk14</artifactId>
@@ -77,7 +84,7 @@
 
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
-        <testSourceDirectory>src/test/scala</testSourceDirectory>
+        <!--<testSourceDirectory>src/test/scala</testSourceDirectory>-->
         <plugins>
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
