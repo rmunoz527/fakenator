@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <properties>
-        <!--<scala.binary.version>2.10</scala.binary.version>-->
+        <scala.binary.version>2.10</scala.binary.version>
         <scala.version>2.11.11</scala.version>
     </properties>
 
@@ -19,7 +19,21 @@
             <id>confluent</id>
             <url>http://packages.confluent.io/maven/</url>
         </repository>
+        <repository>
+            <id>scala-tools.org</id>
+            <name>Scala-Tools Maven2 Repository</name>
+            <url>http://scala-tools.org/repo-releases</url>
+        </repository>
+
     </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>scala-tools.org</id>
+            <name>Scala-Tools Maven2 Repository</name>
+            <url>http://scala-tools.org/repo-releases</url>
+        </pluginRepository>
+    </pluginRepositories>
 <!--
     <parent>
         <groupId>com.stratio</groupId>
@@ -28,6 +42,11 @@
     </parent>-->
 
     <dependencies>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+        </dependency>
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
@@ -91,6 +110,24 @@
                 <artifactId>scala-maven-plugin</artifactId>
             </plugin>
             <plugin>
+                <groupId>org.scala-tools</groupId>
+                <artifactId>maven-scala-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <scalaVersion>${scala.version}</scalaVersion>
+                    <args>
+                        <arg>-target:jvm-1.5</arg>
+                    </args>
+                </configuration>
+            </plugin>
+            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.5</version>
                 <configuration>
@@ -105,6 +142,7 @@
                     </archive>
                 </configuration>
                 <executions>
+
                     <execution>
                         <id>make-assembly</id>
                         <phase>package</phase>
